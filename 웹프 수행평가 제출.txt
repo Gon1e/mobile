@@ -1,0 +1,437 @@
+import 'package:flutter/material.dart';
+
+void main() {
+  runApp(SlideDemoApp());
+}
+
+class SlideDemoApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: '하루살이',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+      ),
+      home: SlidePage(),
+    );
+  }
+}
+
+class SlidePage extends StatefulWidget {
+  @override
+  _SlidePageState createState() => _SlidePageState();
+}
+
+class _SlidePageState extends State<SlidePage> {
+  final PageController _pageController = PageController(initialPage: 0);
+  int _pageIndex = 0;
+  final TextEditingController _textEditingController = TextEditingController();
+  final FocusNode _focusNode = FocusNode();
+  final TextEditingController _diaryEditingController = TextEditingController();
+  final TextEditingController _editDiaryController = TextEditingController();
+  final TextEditingController _checklistController = TextEditingController();
+
+  List<Map<String, dynamic>> _pageData = [
+    {'title': '날짜', 'diary': '', 'checklist': [], 'completed': false}
+  ];
+
+  void _addPage() {
+    _textEditingController.clear();
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('새 페이지 추가'),
+          content: TextField(
+            focusNode: _focusNode,
+            controller: _textEditingController,
+            decoration: InputDecoration(hintText: '날짜를 추가해주세요 YY/MM/DD'),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                String input = _textEditingController.text;
+                if (_isValidDate(input)) {
+                  setState(() {
+                    _pageIndex++;
+                    _pageData.add({
+                      'title': input,
+                      'diary': '',
+                      'checklist': [],
+                      'completed': false
+                    });
+                    _pageController.animateToPage(
+                      _pageData.length - 1,
+                      duration: Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                    );
+                  });
+                  Navigator.of(context).pop();
+                } else {
+                  _showInvalidDateAlert();
+                }
+              },
+              child: Text('추가'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('취소'),
+            ),
+          ],
+        );
+      },
+    );
+    Future.delayed(Duration.zero, () => _focusNode.requestFocus());
+  }
+
+  bool _isValidDate(String input) {
+    final dateRegex = RegExp(r'^\d{2}/\d{2}/\d{2}$');
+    return dateRegex.hasMatch(input);
+  }
+
+  void _showInvalidDateAlert() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('잘못된 날짜 형식'),
+          content: Text('날짜 형식이 맞지 않습니다. YY/MM/DD 형식으로 입력해주세요.'),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                Future.delayed(Duration.zero, () => _focusNode.requestFocus());
+              },
+              child: Text('확인'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _addDiaryEntry() {
+    _diaryEditingController.clear();
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('일기 추가'),
+          content: TextField(
+            controller: _diaryEditingController,
+            maxLines: 5,
+            decoration: InputDecoration(hintText: '오늘의 일기를 작성하세요'),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                setState(() {
+                  _pageData[_pageController.page!.toInt()]['diary'] =
+                      _diaryEditingController.text;
+                });
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('일기가 추가되었습니다.')),
+                );
+              },
+              child: Text('추가'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('취소'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _viewDiaryEntry() {
+    String diaryEntry = _pageData[_pageController.page!.toInt()]['diary']!;
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('작성한 일기'),
+          content: Text(diaryEntry.isNotEmpty
+              ? diaryEntry
+              : '아직 작성된 일기가 없습니다.'),
+          actions: <Widget>[
+            if (diaryEntry.isNotEmpty)
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  _editDiaryEntry();
+                },
+                child: Text('수정'),
+              ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('닫기'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _editDiaryEntry() {
+    int currentPage = _pageController.page!.toInt();
+    _editDiaryController.text = _pageData[currentPage]['diary']!;
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('일기 수정'),
+          content: TextField(
+            controller: _editDiaryController,
+            maxLines: 5,
+            decoration: InputDecoration(hintText: '일기를 수정하세요'),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                setState(() {
+                  _pageData[currentPage]['diary'] = _editDiaryController.text;
+                });
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('일기가 수정되었습니다.')),
+                );
+              },
+              child: Text('저장'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('취소'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _addChecklistItem() {
+    _checklistController.clear();
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('체크리스트 항목 추가'),
+          content: TextField(
+            controller: _checklistController,
+            decoration: InputDecoration(hintText: '체크리스트 항목을 입력하세요'),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                setState(() {
+                  int currentPage = _pageController.page!.toInt();
+                  _pageData[currentPage]['checklist']
+                      .add({'item': _checklistController.text, 'checked': false});
+                });
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('체크리스트 항목이 추가되었습니다.')),
+                );
+              },
+              child: Text('추가'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('취소'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _checkIfChecklistCompleted(int pageIndex) {
+    bool allChecked = _pageData[pageIndex]['checklist']
+        .every((item) => item['checked'] == true);
+    if (allChecked && !_pageData[pageIndex]['completed']) {
+      setState(() {
+        _pageData[pageIndex]['completed'] = true;
+      });
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('오늘 할일 완료!'),
+            content: Text('성공!'),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: Text('확인'),
+              ),
+            ],
+          );
+        },
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    _textEditingController.dispose();
+    _focusNode.dispose();
+    _diaryEditingController.dispose();
+    _editDiaryController.dispose();
+    _checklistController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('하루살이'),
+      ),
+      backgroundColor: Colors.white,
+      body: Center(
+        child: Container(
+          width: MediaQuery.of(context).size.width * 0.7,
+          height: MediaQuery.of(context).size.height * 0.7,
+          color: Colors.white,
+          child: PageView.builder(
+            controller: _pageController,
+            itemCount: _pageData.length,
+            itemBuilder: (context, index) {
+              return Center(
+                child: Stack(
+                  children: [
+                    Container(
+                      width: MediaQuery.of(context).size.width * 0.7,
+                      height: MediaQuery.of(context).size.height * 0.7,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        border: Border.all(color: Colors.black),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Padding(
+                        padding: EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _pageData[index]['title']!,
+                              style: TextStyle(fontSize: 24, color: Colors.black),
+                            ),
+                            SizedBox(height: 16.0),
+                            if (index == 0)
+                              Expanded(
+                                child: Center(
+                                  child: Text(
+                                    '알찬 하루를 시작해보세요!',
+                                    style: TextStyle(fontSize: 24, color: Colors.black),
+                                  ),
+                                ),
+                              ),
+                            if (index != 0)
+                              Expanded(
+                                child: ListView.builder(
+                                  itemCount: _pageData[index]['checklist'].length,
+                                  itemBuilder: (context, checklistIndex) {
+                                    return CheckboxListTile(
+                                      title: Text(
+                                        _pageData[index]['checklist'][checklistIndex]['item'],
+                                        style: TextStyle(
+                                          decoration: _pageData[index]['checklist'][checklistIndex]['checked']
+                                              ? TextDecoration.lineThrough
+                                              : TextDecoration.none,
+                                        ),
+                                      ),
+                                      value: _pageData[index]['checklist'][checklistIndex]['checked'],
+                                      onChanged: (bool? value) {
+                                        setState(() {
+                                          _pageData[index]['checklist'][checklistIndex]['checked'] = value!;
+                                        });
+                                        _checkIfChecklistCompleted(index);
+                                      },
+                                    );
+                                  },
+                                ),
+                              ),
+                            if (_pageData[index]['completed'])
+                              Align(
+                                alignment: Alignment.center,
+                                child: Column(
+                                  children: [
+                                    SizedBox(height: 16.0),
+                                    Text(
+                                      '성공!',
+                                      style: TextStyle(
+                                        fontSize: 32,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.red,
+                                      ),
+                                    ),
+                                    Icon(
+                                      Icons.check_circle,
+                                      size: 100,
+                                      color: Colors.red,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    if (index == _pageData.length - 1)
+                      Positioned(
+                        bottom: 16,
+                        right: 16,
+                        child: FloatingActionButton(
+                          onPressed: _addPage,
+                          child: Icon(Icons.add),
+                        ),
+                      ),
+                    if (index != 0)
+                      Positioned(
+                        bottom: 16,
+                        left: 16,
+                        child: FloatingActionButton(
+                          onPressed: _pageData[index]['diary']!.isEmpty
+                              ? _addDiaryEntry
+                              : _viewDiaryEntry,
+                          child: Icon(
+                            _pageData[index]['diary']!.isEmpty
+                                ? Icons.book
+                                : Icons.visibility,
+                          ),
+                        ),
+                      ),
+                    if (index != 0)
+                      Positioned(
+                        bottom: 16,
+                        left: 80,
+                        child: FloatingActionButton(
+                          onPressed: _addChecklistItem,
+                          child: Icon(Icons.checklist),
+                        ),
+                      ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}
